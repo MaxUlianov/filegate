@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/static/css/stylesheet.css">
+    <title>FileGate</title>
+</head>
+<body class="flex w-full h-screen">
+    <!-- sidebar -->
+    <div class="flex h-screen bg-gray-200 w-1/5">
+        <span>Sidebar</span>
+    </div>
+
+    <!-- main container -->
+    <div class="w-4/5 flex flex-col">
+        <div class="p-4 bg-zinc-50 w-full flex justify-between items-center">
+            <div class="flex space-x-4 mx-5">
+                <a href="/files/" class="p-2 bg-gray-200 rounded-md">FileGate</a>
+            </div>
+
+            <div class="flex space-x-4 mx-5">
+                <a href="/files/upload?path={{.CurrentPath}}" class="p-2 bg-gray-300 rounded-md">Upload</a>
+            </div>
+        </div>
+
+        <div class="mx-5 my-5 flex flex-wrap justify-start p-4 gap-4">
+            {{$currentPath := .CurrentPath}}
+            {{range .Files}}
+            <div class="w-full sm:w-1/4 md:w-1/6 lg:w-1/8 overflow-hidden hover:bg-gray-100 rounded-md">
+
+                <a href="/files/{{$currentPath}}/{{.Name}}" class="hover:text-gray-500 mb-2 cursor-pointer">
+                    <div class="">
+                        <img src="/static/assets/icons/{{.ItemType}}.png" alt="Card image" class="w-1/2 object-cover">
+                    </div>
+                    
+                    <div class="p-4">
+                        <span class="hover:text-gray-500 mb-2">{{.Name}}</a>
+                    </div>
+                </a>
+
+            </div>
+            {{end}}
+        </div>
+    </div>
+    
+</body>
+</html>
