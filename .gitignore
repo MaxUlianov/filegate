@@ -1,0 +1,8 @@
+# filegate - gitignore
+
+# binaries
+filegate
+
+# tailwind
+tailwindcss
+
