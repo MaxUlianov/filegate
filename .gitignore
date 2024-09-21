@@ -8,3 +8,6 @@ tailwindcss
 
 # test files
 shared/*
+
+# TLS
+certs/*

@@ -7,19 +7,18 @@
 </head>
 <body class="flex w-full h-screen">
     <!-- sidebar -->
-    <div class="w-1/5 bg-gray-200">
-        <span>Sidebar</span>
-    </div>
+    {{ template "sidebar.html" . }}
 
     <!-- main container -->
     <div class="w-4/5 flex flex-col">
         <div class="py-4 bg-zinc-50 w-full">
-            <div class="flex mx-5">
-                <a href="/files/" class="p-2 bg-gray-200 rounded-md">FileGate</a>
+            <div class="flex space-x-4 mx-5">
+                <a href="/files/" class="px-3 py-2 bg-gray-200 rounded-md">FileGate</a>
             </div>
         </div>
 
         <div class="flex-grow flex items-center justify-center">
+            
             <form action="/files/upload" method="post" enctype="multipart/form-data" class="w-full max-w-md">
                 <label for="search" class="block mb-2">Upload directory</label>
                 <input type="search" name="uploadPath" value="{{.}}" class="w-full mb-4 p-2 border rounded">
@@ -31,10 +30,13 @@
                         </svg>
                         <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
                     </div>
+                    
                     <input id="dropzone-file" type="file" name="file" class="hidden" />
                 </label>
+
                 <input type="submit" value="Upload" class="mt-4 px-4 py-2 bg-gray-300 text-gray-500 rounded hover:bg-gray-400 cursor-pointer w-full">
             </form>
+
         </div>
     </div>
 </body>

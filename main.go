@@ -9,8 +9,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
+	"time"
 )
 
 type FileItem struct {
@@ -30,7 +32,11 @@ var defaultDir = "./shared"
 var templates = template.Must(template.ParseFiles(
 	"templates/file_view.html",
 	"templates/file_upload_view.html",
+	"templates/sidebar.html",
+	"templates/clipboard_view.html",
 ))
+
+var clipboardContent string
 
 func renderFilesTemplate(w http.ResponseWriter, tmpl string, files []FileItem, currentPath string) {
 	data := TemplateData{
@@ -92,11 +98,32 @@ func listFiles(filesDir string) ([]FileItem, error) {
 	return FileItems, nil
 }
 
+func sanitizeFilename(filename string) string {
+	// Replace spaces with underscores
+	filename = strings.ReplaceAll(filename, " ", "-")
+
+	// Drop not allowed symbols with regex
+	reg := regexp.MustCompile(`[^a-zA-Z0-9_\-.]`)
+	filename = reg.ReplaceAllString(filename, "")
+
+	// Trim trailing dots or spaces
+	filename = strings.Trim(filename, ". ")
+
+	// in case of blank filename, use default name
+	if filename == "" {
+		currentTime := time.Now()
+		filename = "new_file" + currentTime.Format("20060102_150405")
+	}
+
+	return filename
+}
+
 func fileServeHandler(w http.ResponseWriter, r *http.Request) {
 
 	relativePath := r.URL.Path[len("/files/"):]
 	fullPath := filepath.Join(defaultDir, relativePath)
 
+	// debug
 	log.Printf("Trying to access file on %s, relpath '%s'", fullPath, relativePath)
 
 	// Check if file exists and is not a directory
@@ -129,7 +156,7 @@ func fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 
 		// Parse the multipart form:
-		err := r.ParseMultipartForm(10 << 20) // Max memory 10 MB
+		err := r.ParseMultipartForm(100 << 20) // Max memory 100 MB
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -145,6 +172,8 @@ func fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		uploadPath := r.FormValue("uploadPath")
 		fullUploadPath := filepath.Join(defaultDir, uploadPath)
+
+		// debug
 		log.Printf("Trying to upload file on %s", fullUploadPath)
 
 		// check the possible issues with upload path not existing
@@ -165,7 +194,9 @@ func fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Create a new file in the uploads directory
-		dst, err := os.Create(filepath.Join(fullUploadPath, header.Filename))
+		sanitizedFilename := sanitizeFilename(header.Filename)
+
+		dst, err := os.Create(filepath.Join(fullUploadPath, sanitizedFilename))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -179,13 +210,36 @@ func fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Printf("Upload successful: %s", header.Filename)
+		// debug
+		log.Printf("Upload successful: %s", sanitizedFilename)
+
 		http.Redirect(w, r, "/files/"+uploadPath, http.StatusSeeOther)
 
 	} else {
 		currentPath := r.URL.Query().Get("path")
 
 		renderTemplateWithText(w, "file_upload_view", currentPath)
+	}
+}
+
+func clipboardViewHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Error parsing form", http.StatusBadRequest)
+			return
+		}
+
+		newClipboardContent := r.FormValue("clipboardInput")
+		clipboardContent = newClipboardContent
+
+		// debug
+		log.Printf("Added CB text: %s", clipboardContent)
+
+		http.Redirect(w, r, "/clipboard/", http.StatusSeeOther)
+		return
+
+	} else {
+		renderTemplateWithText(w, "clipboard_view", clipboardContent)
 	}
 }
 
@@ -201,6 +255,18 @@ func getLocalIP() string {
 }
 
 func runServer() {
+	// get config
+	// homeDir, err := os.UserHomeDir()
+	// if err != nil {
+	// 	log.Fatal("Error getting home directory: ", err)
+	// }
+
+	// configDir := filepath.Join(homeDir, ".config", "filegate")
+
+	// TLS certs
+	certPath := filepath.Join("./certs", "cert.pem")
+	keyPath := filepath.Join("./certs", "key.pem")
+
 	ip := getLocalIP()
 
 	port := ":8000"
@@ -215,12 +281,15 @@ func runServer() {
 	router.HandleFunc("GET /files/upload", fileUploadHandler)
 	router.HandleFunc("POST /files/upload", fileUploadHandler)
 
+	router.HandleFunc("GET /clipboard/", clipboardViewHandler)
+	router.HandleFunc("POST /clipboard/", clipboardViewHandler)
+
 	server := http.Server{
 		Addr:    port,
 		Handler: router,
 	}
 
-	log.Fatal(server.ListenAndServe())
+	log.Fatal(server.ListenAndServeTLS(certPath, keyPath))
 }
 
 func main() {
