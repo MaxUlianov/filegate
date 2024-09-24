@@ -21,8 +21,9 @@
             
             <form action="/files/upload" method="post" enctype="multipart/form-data" class="w-full max-w-md">
                 <label for="search" class="block mb-2">Upload directory</label>
-                <input type="search" name="uploadPath" value="{{.}}" class="w-full mb-4 p-2 border rounded">
+                <input type="search" id="search" name="uploadPath" value="{{.}}" class="w-full mb-4 p-2 border rounded">
 
+                <div id="dropzone">
                 <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
                     <div class="flex flex-col items-center justify-center pt-5 pb-6 px-5">
                         <svg class="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -33,11 +34,79 @@
                     
                     <input id="dropzone-file" type="file" name="file" class="hidden" />
                 </label>
+                </div>
 
-                <input type="submit" value="Upload" class="mt-4 px-4 py-2 bg-gray-300 text-gray-500 rounded hover:bg-gray-400 cursor-pointer w-full">
+                <div id="file-list" class="mt-4 text-sm text-gray-500"></div>
+                <script>
+                    document.getElementById('dropzone-file').addEventListener('change', function(e) {
+                        var fileNames = [];
+                        for (var i = 0; i < this.files.length; i++) {
+                            fileNames.push(this.files[i].name);
+                        }
+                        document.getElementById('file-list').innerHTML = fileNames.join('<br>');
+                    });
+                </script>
+
+                <input type="submit" value="Upload" class="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-300 hover:text-gray-500 cursor-pointer w-full">
             </form>
 
         </div>
     </div>
 </body>
+
+<script>
+    const dropZone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('dropzone-file');
+    const fileList = document.getElementById('file-list');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    dropZone.addEventListener('drop', handleDrop, false);
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    function highlight(e) {
+        dropZone.classList.add('bg-gray-400');
+    }
+
+    function unhighlight(e) {
+        dropZone.classList.remove('bg-gray-400');
+    }
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleFiles(files);
+    }
+
+    function handleFiles(files) {
+        fileInput.files = files;
+        updateFileList(files);
+    }
+
+    function updateFileList(files) {
+        fileList.innerHTML = Array.from(files)
+            .map(file => `${file.name}<br>`)
+            .join('');
+    }
+
+    fileInput.addEventListener('change', function(e) {
+        handleFiles(this.files);
+    });
+</script>
+
 </html>

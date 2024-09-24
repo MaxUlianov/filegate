@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FileGate Login</title>
+    <link rel="stylesheet" href="/static/css/stylesheet.css">
+</head>
+<body>
+
+    <div class="mx-auto w-8/12 mt-20">
+        <div class="mx-auto w-11/12 bg-white dark:bg-slate-700 rounded-xl mb-4 shadow-md">
+
+            <div class="text-gray-800 dark:text-gray-100 px-4 py-4 text-pretty w-10/12">
+                <form action="/login/" method="POST" class="w-1/2 mx-auto">
+                    {{if eq . "LOGINERROR"}}
+                    <p class="text-red-500 font-bold mb-2">Invalid credentials</p>
+                    {{end}}
+
+                    <label for="username" class="mt-2 block w-full text-md font-bold text-gray-700">User</label>
+                    <select id="username" name="username" class='mt-1 block w-full px-2 py-1 border-2 {{if eq . "ERROR"}} border-red-500 {{else}} border-gray-300 {{end}} rounded-md shadow-sm focus:ring focus:ring-sky-300' required>
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                                        
+                    <label for="password" class="mt-2 block w-full text-md font-bold text-gray-700">Password</label>
+                    <input type="password" id="password" name="password" class='mt-1 block w-full px-2 py-1 border-2 {{if eq . "ERROR"}} border-red-500 {{else}} border-gray-300 {{end}} rounded-md shadow-sm focus:ring focus:ring-sky-300' placeholder="password" required>
+                                
+                    <button type="submit" class="my-3 bg-gray-500 text-white rounded-xl px-4 py-2 hover:bg-gray-300 hover:text-gray-500 font-bold">
+                        Login
+                    </button>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>

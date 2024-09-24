@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"io"
 	"io/fs"
 	"log"
@@ -13,7 +15,15 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/gorilla/sessions"
+	"gopkg.in/yaml.v3"
 )
+
+// ____ ---- ____ ---- ____
+// ---- setup & configs
+
+var store *sessions.CookieStore
 
 type FileItem struct {
 	Name     string
@@ -26,17 +36,56 @@ type TemplateData struct {
 	CurrentPath string
 }
 
-var defaultDir = "./shared"
+// for now leave as is, assigning from the globalConfig
+// to not replace in all the funcs
+var defaultDir string
+var templateDir = "./templates"
+
+// setup configs
+type Config struct {
+	Defaults struct {
+		StorageLocation string `yaml:"storage_location"`
+	} `yaml:"defaults"`
+	UserCreds struct {
+		User string `yaml:"user"`
+	} `yaml:"user_creds"`
+	Session struct {
+		Secret string `yaml:"secret"`
+	} `yaml:"session"`
+}
+
+func LoadConfig(filename string) (*Config, error) {
+	config := &Config{}
+
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	decoder := yaml.NewDecoder(file)
+	if err := decoder.Decode(config); err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+var globalConfig *Config
 
 // cache the HTML templates
 var templates = template.Must(template.ParseFiles(
-	"templates/file_view.html",
-	"templates/file_upload_view.html",
-	"templates/sidebar.html",
-	"templates/clipboard_view.html",
+	path.Join(templateDir, "file_view.html"),
+	path.Join(templateDir, "file_upload_view.html"),
+	path.Join(templateDir, "sidebar.html"),
+	path.Join(templateDir, "clipboard_view.html"),
+	path.Join(templateDir, "login_view.html"),
 ))
 
 var clipboardContent string
+
+// ____ ---- ____ ---- ____
+// ---- template rendering
 
 func renderFilesTemplate(w http.ResponseWriter, tmpl string, files []FileItem, currentPath string) {
 	data := TemplateData{
@@ -60,6 +109,9 @@ func renderTemplateWithText(w http.ResponseWriter, tmpl string, text string) {
 		return
 	}
 }
+
+// ____ ---- ____ ---- ____
+// ---- file system management
 
 func getFileType(pathname fs.DirEntry) string {
 	if !pathname.IsDir() {
@@ -92,7 +144,13 @@ func listFiles(filesDir string) ([]FileItem, error) {
 
 	var FileItems []FileItem
 	for _, file := range files {
-		FileItems = append(FileItems, FileItem{Name: file.Name(), IsDir: file.IsDir(), ItemType: getFileType(file)})
+		FileItems = append(
+			FileItems,
+			FileItem{
+				Name:     file.Name(),
+				IsDir:    file.IsDir(),
+				ItemType: getFileType(file)},
+		)
 	}
 
 	return FileItems, nil
@@ -124,7 +182,7 @@ func fileServeHandler(w http.ResponseWriter, r *http.Request) {
 	fullPath := filepath.Join(defaultDir, relativePath)
 
 	// debug
-	log.Printf("Trying to access file on %s, relpath '%s'", fullPath, relativePath)
+	log.Printf("Trying to access %s, relpath '%s'", fullPath, relativePath)
 
 	// Check if file exists and is not a directory
 	fileInfo, err := os.Stat(fullPath)
@@ -156,7 +214,7 @@ func fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 
 		// Parse the multipart form:
-		err := r.ParseMultipartForm(100 << 20) // Max memory 100 MB
+		err := r.ParseMultipartForm(100 << 20) // cap max filesize 100 MB
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -174,7 +232,7 @@ func fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		fullUploadPath := filepath.Join(defaultDir, uploadPath)
 
 		// debug
-		log.Printf("Trying to upload file on %s", fullUploadPath)
+		// log.Printf("Trying to upload file on %s", fullUploadPath)
 
 		// check the possible issues with upload path not existing
 		dirInfo, err := os.Stat(fullUploadPath)
@@ -232,9 +290,6 @@ func clipboardViewHandler(w http.ResponseWriter, r *http.Request) {
 		newClipboardContent := r.FormValue("clipboardInput")
 		clipboardContent = newClipboardContent
 
-		// debug
-		log.Printf("Added CB text: %s", clipboardContent)
-
 		http.Redirect(w, r, "/clipboard/", http.StatusSeeOther)
 		return
 
@@ -243,15 +298,107 @@ func clipboardViewHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getLocalIP() string {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
+// ____ ---- ____ ---- ____
+// ---- session & user login management
 
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return strings.Split(localAddr.String(), ":")[0]
+func generateRandomID() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return base64.URLEncoding.EncodeToString(b)
+}
+
+func setSession(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "session.id")
+
+	randomID := generateRandomID()
+
+	session.Values["session_idstring"] = randomID
+	session.Save(r, w)
+}
+
+func checkSession(r *http.Request) bool {
+	session, _ := store.Get(r, "session.id")
+	_, ok := session.Values["session_idstring"].(string)
+
+	return ok
+}
+
+func emptySession(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, "session.id")
+	delete(session.Values, "session_idstring")
+	session.Save(r, w)
+}
+
+func authUser(username string, password string) bool {
+	return username == "user" && password == globalConfig.UserCreds.User
+}
+
+func userLoginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, "Unable to parse form", http.StatusBadRequest)
+			return
+		}
+
+		username := r.FormValue("username")
+		password := r.FormValue("password")
+
+		if username == "" || password == "" {
+			renderTemplateWithText(w, "login_view", "")
+		}
+
+		userAuthenticated := authUser(username, password)
+		if !userAuthenticated {
+			renderTemplateWithText(w, "login_view", "LOGINERROR")
+		}
+
+		setSession(w, r)
+
+		http.Redirect(w, r, "/files/", http.StatusSeeOther)
+		return
+	}
+
+	renderTemplateWithText(w, "login_view", "")
+}
+
+func authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// don't redirect the login path itself
+		if strings.HasPrefix(r.URL.Path, "/static/css/") ||
+			r.URL.Path == "/login/" ||
+			r.URL.Path == "/favicon.ico" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		ok := checkSession(r)
+		if !ok {
+			http.Redirect(w, r, "/login/", http.StatusSeeOther)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// ____ ---- ____ ---- ____
+// ---- server funcs
+
+func getLocalIP() string {
+	// read IP table to get local network IP
+	// to access from other devices
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return ""
 }
 
 func runServer() {
@@ -276,6 +423,9 @@ func runServer() {
 	// static files (CSS)
 	router.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 
+	router.HandleFunc("GET /login/", userLoginHandler)
+	router.HandleFunc("POST /login/", userLoginHandler)
+
 	router.HandleFunc("GET /files/", fileServeHandler)
 
 	router.HandleFunc("GET /files/upload", fileUploadHandler)
@@ -286,10 +436,25 @@ func runServer() {
 
 	server := http.Server{
 		Addr:    port,
-		Handler: router,
+		Handler: authMiddleware(router),
 	}
 
 	log.Fatal(server.ListenAndServeTLS(certPath, keyPath))
+}
+
+// ____ ---- ____ ---- ____
+// ---- running the app
+
+func init() {
+	var err error
+	globalConfig, err = LoadConfig("config.yaml")
+	if err != nil {
+		log.Fatalf("Error loading config: %v", err)
+	}
+
+	defaultDir = globalConfig.Defaults.StorageLocation
+
+	store = sessions.NewCookieStore([]byte(globalConfig.Session.Secret))
 }
 
 func main() {

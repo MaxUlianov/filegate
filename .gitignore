@@ -11,3 +11,6 @@ shared/*
 
 # TLS
 certs/*
+
+# config to prevent leaks
+config.yaml

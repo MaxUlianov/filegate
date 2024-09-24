@@ -1,0 +1,8 @@
+defaults:
+  storage_location: "./shared"
+
+user_creds:
+  user: "password"
+
+session:
+  secret: "session-secret-key"
