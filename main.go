@@ -3,15 +3,18 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"io/fs"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"text/template"
 	"time"
@@ -25,6 +28,14 @@ import (
 
 var store *sessions.CookieStore
 
+type resourcePaths struct {
+	baseDir     string
+	configDir   string
+	templateDir string
+	staticDir   string
+	certsDir    string
+}
+
 type FileItem struct {
 	Name     string
 	IsDir    bool
@@ -36,10 +47,41 @@ type TemplateData struct {
 	CurrentPath string
 }
 
+// defaultDir = root dir for file storage
 // for now leave as is, assigning from the globalConfig
 // to not replace in all the funcs
 var defaultDir string
-var templateDir = "./templates"
+
+func getBasePath() string {
+	execPath, err := os.Executable()
+	if err != nil {
+		return "."
+	}
+
+	execDir := filepath.Dir(execPath)
+
+	// on case of macOS app bundle, binary is in ?/Contents/MacOS
+	if strings.HasSuffix(execDir, "MacOS") {
+		// go to ../Resources = ?/Contents/Resources
+		bundlePath := filepath.Dir(execDir)                     // Contents
+		resourcesPath := filepath.Join(bundlePath, "Resources") // Resources
+
+		return resourcesPath
+	}
+
+	// else binary dir
+	return execDir
+}
+
+func setPaths(basePath string) *resourcePaths {
+	return &resourcePaths{
+		baseDir:     basePath,
+		configDir:   filepath.Join(basePath, "config.yaml"),
+		templateDir: filepath.Join(basePath, "templates"),
+		staticDir:   filepath.Join(basePath, "static"),
+		certsDir:    filepath.Join(basePath, "certs"),
+	}
+}
 
 // setup configs
 type Config struct {
@@ -71,18 +113,26 @@ func LoadConfig(filename string) (*Config, error) {
 	return config, nil
 }
 
+var appPaths *resourcePaths
 var globalConfig *Config
 
-// cache the HTML templates
-var templates = template.Must(template.ParseFiles(
-	path.Join(templateDir, "file_view.html"),
-	path.Join(templateDir, "file_upload_view.html"),
-	path.Join(templateDir, "sidebar.html"),
-	path.Join(templateDir, "clipboard_view.html"),
-	path.Join(templateDir, "login_view.html"),
-))
+var templates *template.Template
 
 var clipboardContent string
+
+func setupLogFile() {
+	logFilePath := filepath.Join(appPaths.baseDir, "filegate.log")
+
+	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer logFile.Close()
+
+	log.SetOutput(logFile)
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+}
 
 // ____ ---- ____ ---- ____
 // ---- template rendering
@@ -182,7 +232,7 @@ func fileServeHandler(w http.ResponseWriter, r *http.Request) {
 	fullPath := filepath.Join(defaultDir, relativePath)
 
 	// debug
-	log.Printf("Trying to access %s, relpath '%s'", fullPath, relativePath)
+	// log.Printf("Trying to access %s, relpath '%s'", fullPath, relativePath)
 
 	// Check if file exists and is not a directory
 	fileInfo, err := os.Stat(fullPath)
@@ -269,7 +319,7 @@ func fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// debug
-		log.Printf("Upload successful: %s", sanitizedFilename)
+		// log.Printf("Upload successful: %s", sanitizedFilename)
 
 		http.Redirect(w, r, "/files/"+uploadPath, http.StatusSeeOther)
 
@@ -401,27 +451,31 @@ func getLocalIP() string {
 	return ""
 }
 
-func runServer() {
-	// get config
-	// homeDir, err := os.UserHomeDir()
-	// if err != nil {
-	// 	log.Fatal("Error getting home directory: ", err)
-	// }
+func showMacNotification(message string) {
+	// macOS only
+	if runtime.GOOS == "darwin" {
 
-	// configDir := filepath.Join(homeDir, ".config", "filegate")
+		cmd := exec.Command("osascript", "-e", `display notification "`+message+`" with title "FileGate"`)
+		cmd.Run()
+	}
+}
+
+func runServer() {
 
 	// TLS certs
-	certPath := filepath.Join("./certs", "cert.pem")
-	keyPath := filepath.Join("./certs", "key.pem")
+	certPath := filepath.Join(appPaths.certsDir, "cert.pem")
+	keyPath := filepath.Join(appPaths.certsDir, "key.pem")
 
 	ip := getLocalIP()
 
 	port := ":8000"
 	router := http.NewServeMux()
-	log.Printf("Server starting on %s%s ...\n", ip, port)
+
+	message := fmt.Sprintf("Server starting on %s%s ...\n", ip, port)
+	showMacNotification(message)
 
 	// static files (CSS)
-	router.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	router.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(appPaths.staticDir))))
 
 	router.HandleFunc("GET /login/", userLoginHandler)
 	router.HandleFunc("POST /login/", userLoginHandler)
@@ -446,8 +500,13 @@ func runServer() {
 // ---- running the app
 
 func init() {
+	basePath := getBasePath()
+	appPaths = setPaths(basePath)
+
+	setupLogFile()
+
 	var err error
-	globalConfig, err = LoadConfig("config.yaml")
+	globalConfig, err = LoadConfig(appPaths.configDir)
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
@@ -455,6 +514,15 @@ func init() {
 	defaultDir = globalConfig.Defaults.StorageLocation
 
 	store = sessions.NewCookieStore([]byte(globalConfig.Session.Secret))
+
+	// cache the HTML templates
+	templates = template.Must(template.ParseFiles(
+		path.Join(appPaths.templateDir, "file_view.html"),
+		path.Join(appPaths.templateDir, "file_upload_view.html"),
+		path.Join(appPaths.templateDir, "sidebar.html"),
+		path.Join(appPaths.templateDir, "clipboard_view.html"),
+		path.Join(appPaths.templateDir, "login_view.html"),
+	))
 }
 
 func main() {
