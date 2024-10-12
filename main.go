@@ -119,8 +119,9 @@ var globalConfig *Config
 var templates *template.Template
 
 var clipboardContent string
+var logFile *os.File
 
-func setupLogFile() {
+func setupLogFile() (*os.File, error) {
 	logFilePath := filepath.Join(appPaths.baseDir, "filegate.log")
 
 	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
@@ -128,10 +129,18 @@ func setupLogFile() {
 		log.Fatal(err)
 	}
 
-	defer logFile.Close()
+	// defer logFile.Close()
 
 	log.SetOutput(logFile)
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
+	return logFile, nil
+}
+
+func closeLogFile() {
+	if logFile != nil {
+		logFile.Close()
+	}
 }
 
 // ____ ---- ____ ---- ____
@@ -258,6 +267,25 @@ func fileServeHandler(w http.ResponseWriter, r *http.Request) {
 		// Serve the file
 		http.ServeFile(w, r, fullPath)
 	}
+}
+
+func fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
+	relativePath := r.URL.Path[len("/download/"):]
+	fullPath := filepath.Join(defaultDir, relativePath)
+
+	file, err := os.Open(fullPath)
+
+	if err != nil {
+		log.Printf("Download error %s", err)
+
+		http.Error(w, "File not found", http.StatusNotFound)
+		return
+	}
+	defer file.Close()
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fullPath))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	io.Copy(w, file)
 }
 
 func fileUploadHandler(w http.ResponseWriter, r *http.Request) {
@@ -452,11 +480,15 @@ func getLocalIP() string {
 }
 
 func showMacNotification(message string) {
-	// macOS only
-	if runtime.GOOS == "darwin" {
+	// macOS App only
+	if filepath.Base(filepath.Dir(appPaths.baseDir)) == "MacOS" {
+		if runtime.GOOS == "darwin" {
 
-		cmd := exec.Command("osascript", "-e", `display notification "`+message+`" with title "FileGate"`)
-		cmd.Run()
+			cmd := exec.Command("osascript", "-e", `display notification "`+message+`" with title "FileGate"`)
+			cmd.Run()
+		}
+	} else {
+		log.Print(message)
 	}
 }
 
@@ -485,6 +517,8 @@ func runServer() {
 	router.HandleFunc("GET /files/upload", fileUploadHandler)
 	router.HandleFunc("POST /files/upload", fileUploadHandler)
 
+	router.HandleFunc("GET /download/", fileDownloadHandler)
+
 	router.HandleFunc("GET /clipboard/", clipboardViewHandler)
 	router.HandleFunc("POST /clipboard/", clipboardViewHandler)
 
@@ -503,9 +537,12 @@ func init() {
 	basePath := getBasePath()
 	appPaths = setPaths(basePath)
 
-	setupLogFile()
-
 	var err error
+	// logFile, err = setupLogFile()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
 	globalConfig, err = LoadConfig(appPaths.configDir)
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
@@ -526,5 +563,6 @@ func init() {
 }
 
 func main() {
+	// defer closeLogFile()
 	runServer()
 }
