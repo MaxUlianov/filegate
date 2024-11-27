@@ -265,6 +265,9 @@ func fileServeHandler(w http.ResponseWriter, r *http.Request) {
 
 	} else {
 		// Serve the file
+		fileName := filepath.Base(fullPath)
+
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 		http.ServeFile(w, r, fullPath)
 	}
 }
@@ -283,7 +286,9 @@ func fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fullPath))
+	fileName := filepath.Base(fullPath)
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 	w.Header().Set("Content-Type", "application/octet-stream")
 	io.Copy(w, file)
 }
