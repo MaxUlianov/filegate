@@ -449,6 +449,7 @@ func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// don't redirect the login path itself
 		if strings.HasPrefix(r.URL.Path, "/static/css/") ||
+			strings.HasPrefix(r.URL.Path, "/static/assets/logo/") ||
 			r.URL.Path == "/login/" ||
 			r.URL.Path == "/favicon.ico" {
 			next.ServeHTTP(w, r)
@@ -513,9 +514,9 @@ func runServer() {
 
 	// static files (CSS)
 	router.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(appPaths.staticDir))))
-  router.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-    http.ServeFile(w, r, filepath.Join(appPaths.staticDir, "assets", "favicon.ico"))
-  })
+	router.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(appPaths.staticDir, "assets", "favicon.ico"))
+	})
 
 	router.HandleFunc("GET /login/", userLoginHandler)
 	router.HandleFunc("POST /login/", userLoginHandler)

@@ -9,10 +9,13 @@
     <div class="mx-auto w-8/12 mt-20">
         <div class="mx-auto w-11/12 bg-white dark:bg-slate-700 rounded-xl mb-4 shadow-md">
 
-            <div class="text-gray-800 dark:text-gray-100 px-4 py-4 text-pretty w-10/12">
+            <div class="text-gray-800 dark:text-gray-100 px-4 py-2 text-pretty w-10/12 mx-auto">
                 <form action="/login/" method="POST" class="w-1/2 mx-auto">
                     {{if eq . "LOGINERROR"}}
-                    <p class="text-red-500 font-bold mb-2">Invalid credentials</p>
+                        <img src="/static/assets/logo/filegate-closed-red-512.png" alt="FileGate Closed Red" class="w-1/2 mx-auto object-cover">
+                        <p class="text-red-500 font-bold mb-2">Invalid credentials</p>
+                    {{else}}
+                        <img src="/static/assets/logo/filegate-closed-512.png" alt="FileGate Closed" class="w-1/2 mx-auto object-cover">
                     {{end}}
 
                     <label for="username" class="mt-2 block w-full text-md font-bold text-gray-700">User</label>

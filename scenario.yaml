@@ -1,0 +1,3 @@
+# tailwind
+tw: tailwind -i $(pwd)/static/css/input.css -o $(pwd)/static/css/stylesheet.css
+tw-watch: tailwind -i $(pwd)/static/css/input.css -o $(pwd)/static/css/stylesheet.css --watch
