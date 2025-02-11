@@ -21,7 +21,7 @@
 
             <!-- upload button -->
             <div class="flex space-x-4 mx-5">
-                <a href="/files/upload?path={{.CurrentPath}}" class="px-3 py-2 bg-gray-300 rounded-md">
+                <a href="/files/upload?path={{.CurrentPath}}" class="px-3 py-2 bg-gray-300 hover:bg-gray-200 rounded-md">
                     Upload
                 </a>
             </div>
@@ -45,7 +45,9 @@
                 </a>
                 {{if ne .ItemType "dir"}}
                 <div class="px-2 pb-2">
-                    <a href="/download/{{$currentPath}}/{{.Name}}" class="block w-full text-center text-black bg-gray-50 hover:bg-white rounded-md py-2 cursor-pointer">download</a>
+                    <a href="/download/{{$currentPath}}/{{.Name}}" class="block w-full text-center text-black bg-gray-100 hover:bg-white rounded-md py-2 cursor-pointer">
+                        download
+                    </a>
                 </div>
                 {{end}}
             </div>
