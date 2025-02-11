@@ -10,17 +10,20 @@
     {{ template "sidebar.html" . }}
 
     <!-- main container -->
-    <div class="w-4/5 flex flex-col h-full">
+    <div class="ml-56 flex-1 flex-col h-full">
+        <!-- navbar -->
         <div class="p-4 bg-zinc-50 w-full flex justify-between items-center">
+
+            <!-- forward-back menu + dir name -->
             <div class="flex space-x-4 mx-5 items-center">
-                <a href="/files/" class="flex items-center space-x-2">
-                    <img src="/static/assets/logo/filegate-open-512.png" alt="Logo" class="h-12 object-cover">                    
-                    <span class="font-bold text-slate-700 text-lg px-2 py-2">FileGate</span>
-                </a>
+                
             </div>
 
+            <!-- upload button -->
             <div class="flex space-x-4 mx-5">
-                <a href="/files/upload?path={{.CurrentPath}}" class="px-3 py-2 bg-gray-300 rounded-md">Upload</a>
+                <a href="/files/upload?path={{.CurrentPath}}" class="px-3 py-2 bg-gray-300 rounded-md">
+                    Upload
+                </a>
             </div>
         </div>
 
