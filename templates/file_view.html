@@ -7,16 +7,18 @@
 </head>
 <body class="flex w-full h-screen">
     <!-- sidebar -->
-    {{ template "sidebar.html" . }}
+    {{ $currentPage := "files" }}
+    {{ template "sidebar.html" $currentPage }}
 
     <!-- main container -->
+    {{$currentPath := .CurrentPath}}
     <div class="ml-56 flex-1 flex-col h-full">
         <!-- navbar -->
-        <div class="p-4 bg-zinc-50 w-full flex justify-between items-center">
+        <div class="fixed left-56 right-0 top-0 p-4 bg-zinc-50 flex justify-between items-center">
 
             <!-- forward-back menu + dir name -->
             <div class="flex space-x-4 mx-5 items-center">
-                
+                <p>./{{$currentPath}}</p>
             </div>
 
             <!-- upload button -->
@@ -27,8 +29,7 @@
             </div>
         </div>
 
-        <div class="mx-5 my-5 flex flex-wrap justify-start p-4 gap-4">
-            {{$currentPath := .CurrentPath}}
+        <div class="pt-20 mx-5 my-5 flex flex-wrap justify-start p-2 gap-4">
             {{range .Files}}
             <div class="w-full sm:w-1/4 md:w-1/6 lg:w-1/8 hover:bg-gray-100 flex flex-col rounded-md">
                 <a href="/files/{{$currentPath}}/{{.Name}}" class="w-full flex-grow overflow-hidden hover:text-gray-500 mb-2 cursor-pointer">
@@ -45,7 +46,7 @@
                 </a>
                 {{if ne .ItemType "dir"}}
                 <div class="px-2 pb-2">
-                    <a href="/download/{{$currentPath}}/{{.Name}}" class="block w-full text-center text-black bg-gray-100 hover:bg-white rounded-md py-2 cursor-pointer">
+                    <a href="/download/{{$currentPath}}/{{.Name}}" class="block w-full text-center text-black bg-gray-200 hover:bg-white rounded-md py-2 cursor-pointer">
                         download
                     </a>
                 </div>

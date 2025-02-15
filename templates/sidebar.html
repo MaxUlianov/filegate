@@ -9,13 +9,14 @@
     </div>
 
     <!-- sections menu -->
-    <div class="my-5 py-2 w-2/3 mx-auto">
+    {{ $currentPage := . }}
+    <div class="my-5 w-2/3 mx-auto">
         <div class="py-2">
-            <a href="/files/" class="inline-block py-1 px-3 w-full hover:bg-gray-300 rounded-md">File Storage</a>
+            <a href="/files/" class='inline-block py-1 px-3 w-full {{ if eq $currentPage "files" }} bg-gray-300 {{end}} hover:bg-gray-300 rounded-md'>File Storage</a>
         </div>
 
         <div class="py-2">
-            <a href="/clipboard/" class="inline-block py-1 px-3 w-full hover:bg-gray-300 rounded-md">Clipboard</a>
+            <a href="/clipboard/" class='inline-block py-1 px-3 w-full {{ if eq $currentPage "clipboard" }} bg-gray-300 {{end}} hover:bg-gray-300 rounded-md'>Clipboard</a>
         </div>
     </div>
 </div>

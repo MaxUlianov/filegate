@@ -7,14 +7,11 @@
 </head>
 <body class="flex w-full h-screen">
     <!-- sidebar -->
-    {{ template "sidebar.html" . }}
+    {{ $currentPage := "clipboard" }}
+    {{ template "sidebar.html" $currentPage }}
 
     <!-- main container -->
     <div class="ml-56 flex-1 flex-col">
-        <div class="p-4 bg-zinc-50 w-full h-20 flex justify-between items-center">
-            <div class="flex space-x-4 mx-5">
-            </div>
-        </div>
 
         <div class="mx-5 my-5">
             
