@@ -118,7 +118,7 @@ var globalConfig *Config
 
 var templates *template.Template
 
-var clipboardContent string
+var clipboardContent []string
 var logFile *os.File
 
 func setupLogFile() (*os.File, error) {
@@ -162,6 +162,15 @@ func renderFilesTemplate(w http.ResponseWriter, tmpl string, files []FileItem, c
 
 func renderTemplateWithText(w http.ResponseWriter, tmpl string, text string) {
 	err := templates.ExecuteTemplate(w, tmpl+".html", text)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func renderTemplateWithArray(w http.ResponseWriter, tmpl string, data []string) {
+	err := templates.ExecuteTemplate(w, tmpl+".html", data)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -371,13 +380,13 @@ func clipboardViewHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		newClipboardContent := r.FormValue("clipboardInput")
-		clipboardContent = newClipboardContent
+		clipboardContent = append(clipboardContent, newClipboardContent)
 
 		http.Redirect(w, r, "/clipboard/", http.StatusSeeOther)
 		return
 
 	} else {
-		renderTemplateWithText(w, "clipboard_view", clipboardContent)
+		renderTemplateWithArray(w, "clipboard_view", clipboardContent)
 	}
 }
 

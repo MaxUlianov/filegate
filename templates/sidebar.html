@@ -1,4 +1,4 @@
-<div class="fixed left-0 top-0 h-screen bg-gray-200 w-56">
+<div class="fixed left-0 top-0 h-screen bg-gray-200 w-56 flex flex-col">
 
     <!-- logo -->
     <div class="py-4">
@@ -18,5 +18,10 @@
         <div class="py-2">
             <a href="/clipboard/" class='inline-block py-1 px-3 w-full {{ if eq $currentPage "clipboard" }} bg-gray-300 {{end}} hover:bg-gray-300 rounded-md'>Clipboard</a>
         </div>
+    </div>
+
+    <!-- version -->
+    <div class="mt-auto pb-4 w-full text-center">
+        v0.6
     </div>
 </div>
