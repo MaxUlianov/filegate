@@ -1,3 +1,6 @@
+# Go
+build: go build
+
 # tailwind
 tw: tailwindcss -i $(pwd)/static/css/input.css -o $(pwd)/static/css/stylesheet.css
 tw-watch: tailwindcss -i $(pwd)/static/css/input.css -o $(pwd)/static/css/stylesheet.css --watch

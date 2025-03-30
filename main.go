@@ -295,10 +295,19 @@ func fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	// get file size for browser to show download %
+	fileInfo, err := file.Stat()
+	if err != nil {
+		log.Printf("Error getting file info: %s", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	fileSize := fileInfo.Size()
 	fileName := filepath.Base(fullPath)
 
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", fileSize))
 	io.Copy(w, file)
 }
 
@@ -530,6 +539,10 @@ func runServer() {
 	router.HandleFunc("GET /login/", userLoginHandler)
 	router.HandleFunc("POST /login/", userLoginHandler)
 
+	// redirect to main app page /files/
+	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/files", http.StatusMovedPermanently)
+	})
 	router.HandleFunc("GET /files/", fileServeHandler)
 
 	router.HandleFunc("GET /files/upload", fileUploadHandler)
