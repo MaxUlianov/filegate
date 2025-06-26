@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"html/template"
 	"io"
 	"io/fs"
 	"log"
@@ -16,7 +17,6 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/gorilla/sessions"
