@@ -249,6 +249,13 @@ func fileServeHandler(w http.ResponseWriter, r *http.Request) {
 	relativePath := r.URL.Path[len("/files/"):]
 	fullPath := filepath.Join(defaultDir, relativePath)
 
+	// sanitize filepath
+	fullPath = filepath.Clean(fullPath)
+	if !strings.HasPrefix(fullPath, defaultDir) {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
+
 	// debug
 	// log.Printf("Trying to access %s, relpath '%s'", fullPath, relativePath)
 
@@ -284,6 +291,13 @@ func fileServeHandler(w http.ResponseWriter, r *http.Request) {
 func fileDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	relativePath := r.URL.Path[len("/download/"):]
 	fullPath := filepath.Join(defaultDir, relativePath)
+
+	// sanitize filepath
+	fullPath = filepath.Clean(fullPath)
+	if !strings.HasPrefix(fullPath, defaultDir) {
+		http.Error(w, "Invalid path", http.StatusBadRequest)
+		return
+	}
 
 	file, err := os.Open(fullPath)
 
@@ -331,6 +345,13 @@ func fileUploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		uploadPath := r.FormValue("uploadPath")
 		fullUploadPath := filepath.Join(defaultDir, uploadPath)
+
+		// sanitize filepath
+		fullUploadPath = filepath.Clean(fullUploadPath)
+		if !strings.HasPrefix(fullUploadPath, defaultDir) {
+			http.Error(w, "Invalid path", http.StatusBadRequest)
+			return
+		}
 
 		// debug
 		// log.Printf("Trying to upload file on %s", fullUploadPath)
