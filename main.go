@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"flag"
 	"fmt"
 	"html/template"
 	"io"
@@ -524,9 +525,10 @@ func getLocalIP() string {
 	return ""
 }
 
-func showMacNotification(message string) {
+func showMacNotification(message string, notifyFlag bool) {
+
 	// macOS App only
-	if filepath.Base(filepath.Dir(appPaths.baseDir)) == "MacOS" {
+	if filepath.Base(filepath.Dir(appPaths.baseDir)) == "MacOS" || notifyFlag {
 		if runtime.GOOS == "darwin" {
 
 			cmd := exec.Command("osascript", "-e", `display notification "`+message+`" with title "FileGate"`)
@@ -549,7 +551,10 @@ func runServer() {
 	router := http.NewServeMux()
 
 	message := fmt.Sprintf("Server starting on %s%s ...\n", ip, port)
-	showMacNotification(message)
+
+	notifyFlag := flag.Bool("notify", false, "show macOS notification")
+	flag.Parse()
+	showMacNotification(message, *notifyFlag)
 
 	// static files (CSS)
 	router.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(appPaths.staticDir))))
