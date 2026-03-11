@@ -1,4 +1,7 @@
-<div class="fixed left-0 top-0 h-screen bg-gray-200 w-56 flex flex-col">
+<div id="sidebar-overlay" class="fixed inset-0 bg-black/40 z-20 hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+<div id="sidebar" class="fixed left-0 top-0 h-screen bg-gray-200 w-56 flex flex-col z-30
+    -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
 
     <!-- logo -->
     <div class="py-4">
@@ -11,17 +14,17 @@
     <!-- sections menu -->
     {{ $currentPage := . }}
     <div class="my-5 w-2/3 mx-auto">
-        <div class="py-2">
-            <a href="/files/" class='inline-block py-1 px-3 w-full {{ if eq $currentPage "files" }} bg-gray-300 {{end}} hover:bg-gray-300 rounded-md'>File Storage</a>
+        <div class="py-1">
+            <a href="/files/" class='inline-block py-2 px-3 w-full {{ if eq $currentPage "files" }} bg-gray-300 {{end}} hover:bg-gray-300 rounded-md'>File Storage</a>
         </div>
 
-        <div class="py-2">
-            <a href="/clipboard/" class='inline-block py-1 px-3 w-full {{ if eq $currentPage "clipboard" }} bg-gray-300 {{end}} hover:bg-gray-300 rounded-md'>Clipboard</a>
+        <div class="py-1">
+            <a href="/clipboard/" class='inline-block py-2 px-3 w-full {{ if eq $currentPage "clipboard" }} bg-gray-300 {{end}} hover:bg-gray-300 rounded-md'>Clipboard</a>
         </div>
     </div>
 
     <!-- version -->
     <div class="mt-auto pb-4 w-full text-center">
-        v0.6
+        v0.7
     </div>
 </div>
