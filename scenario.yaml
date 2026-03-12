@@ -4,3 +4,5 @@ build: go build
 # tailwind
 tw: tailwindcss -i $(pwd)/static/css/input.css -o $(pwd)/static/css/stylesheet.css
 tw-watch: tailwindcss -i $(pwd)/static/css/input.css -o $(pwd)/static/css/stylesheet.css --watch
+tw4: tailwindcss4 -i $(pwd)/static/css/input.css -o $(pwd)/static/css/stylesheet.css
+tw4-watch: tailwindcss4 -i $(pwd)/static/css/input.css -o $(pwd)/static/css/stylesheet.css --watch
